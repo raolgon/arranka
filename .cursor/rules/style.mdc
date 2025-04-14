@@ -1,0 +1,11 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+
+# Your rule content
+
+- Use only DaisyUI and Tailwind components
+- Margin of 4 always
+- Never hardcode any styler
