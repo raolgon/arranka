@@ -1,6 +1,50 @@
+import { Link, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { supabase } from "../../supabaseClient";
 import ArrankeOfTheDayCard from "../arrankes/ArrankeOfTheDayCard";
+import { Arranke } from "../../types/arranke";
 
-const HeroSection = () => {
+interface HeroSectionProps {
+    featuredArranke: Arranke | null;
+}
+
+const HeroSection = ({ featuredArranke }: HeroSectionProps) => {
+    const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const [checkingSession, setCheckingSession] = useState(true);
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        const checkSession = async () => {
+            try {
+                const { data: { session } } = await supabase.auth.getSession();
+                setIsLoggedIn(!!session);
+            } catch (error) {
+                console.error("Error checking session:", error);
+            } finally {
+                setCheckingSession(false);
+            }
+        };
+
+        checkSession();
+
+        // Listen for auth state changes
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            setIsLoggedIn(!!session);
+        });
+
+        return () => {
+            subscription.unsubscribe();
+        };
+    }, []);
+
+    const handleArrankeClick = () => {
+        if (isLoggedIn) {
+            navigate("/newArranke");
+        } else {
+            navigate("/login");
+        }
+    };
+
     return (
         <div className="bg-base-200 min-h-screen w-full flex items-center justify-center">
             <div className="container mx-auto px-4">
@@ -9,14 +53,23 @@ const HeroSection = () => {
                         <div className="max-w-md">
                             <h1 className="text-5xl font-bold">arranka tu proyecto</h1>
                             <p className="py-6">
-                                arranke es una plataforma que te permite crear y compartir tus proyectos de con todos.
+                                arranke es una plataforma que te permite crear y compartir tus proyectos con todos.
                             </p>
                             <div className="flex flex-wrap justify-center lg:justify-start gap-4">
-                                <button className="btn btn-primary">arranka tu proyecto</button>
-                                <button className="btn btn-accent">ve todos los arrankes</button>
+                                <button
+                                    onClick={handleArrankeClick}
+                                    className="btn btn-primary"
+                                    disabled={checkingSession}
+                                >
+                                    {checkingSession ? (
+                                        <span className="loading loading-spinner loading-xs mr-2"></span>
+                                    ) : null}
+                                    arranka tu proyecto
+                                </button>
+                                <Link to="/projects" className="btn btn-accent">ve todos los arrankes</Link>
                             </div>
                         </div>
-                        <ArrankeOfTheDayCard />
+                        <ArrankeOfTheDayCard arranke={featuredArranke || undefined} />
                     </div>
                 </div>
             </div>

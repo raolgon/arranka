@@ -10,7 +10,9 @@ interface Arranke {
     arranke_url: string | null;
     logo_url: string | null;
     owner_id: string | null;
-    owner_name: string | null;
+    owner_name: string | null; // Will store full_name from profile
+    owner_username: string | null; // Will store username from profile
+    display_name_preference: 'full_name' | 'username' | 'default' | null; // Which name to display in cards and pages
     arranke_category: string | null;
 }
 
@@ -25,6 +27,8 @@ const NewArranke = () => {
         logo_url: null,
         owner_id: null,
         owner_name: null,
+        owner_username: null,
+        display_name_preference: 'default', // Default to using full_name if available, otherwise username
         arranke_category: null
     });
     const [logoFile, setLogoFile] = useState<File | null>(null);
@@ -54,11 +58,33 @@ const NewArranke = () => {
 
             if (session) {
                 setUser(session.user);
+
+                // Set owner_id initially
                 setArranke(prev => ({
                     ...prev,
                     owner_id: session.user.id,
-                    owner_name: session.user.email?.split('@')[0] || 'user'
+                    // Default values in case profile fetch fails
+                    owner_name: session.user.email?.split('@')[0] || 'user',
+                    owner_username: session.user.email?.split('@')[0] || 'user'
                 }));
+
+                // Fetch profile data
+                const { data: profileData, error: profileError } = await supabase
+                    .from('profiles')
+                    .select('username, full_name')
+                    .eq('id', session.user.id)
+                    .single();
+
+                if (profileError && profileError.code !== 'PGRST116') { // PGRST116 is "no rows returned" error
+                    console.error("Error fetching profile:", profileError);
+                } else if (profileData) {
+                    // Update arranke with profile data
+                    setArranke(prev => ({
+                        ...prev,
+                        owner_name: profileData.full_name || session.user.email?.split('@')[0] || 'user',
+                        owner_username: profileData.username || session.user.email?.split('@')[0] || 'user'
+                    }));
+                }
             } else {
                 navigate('/login');
             }
@@ -107,7 +133,8 @@ const NewArranke = () => {
                 logoUrl = publicUrl;
             }
 
-            const { error } = await supabase
+            // Insert the new arranke and get the ID
+            const { data: newArranke, error } = await supabase
                 .from('arrankes')
                 .insert([{
                     arranke_name: arranke.arranke_name,
@@ -116,15 +143,71 @@ const NewArranke = () => {
                     arranke_url: arranke.arranke_url,
                     arranke_category: arranke.arranke_category,
                     owner_id: user.id,
-                    owner_name: user.user_metadata.username,
+                    owner_name: arranke.owner_name, // Using full_name from profile
+                    owner_username: arranke.owner_username, // Using username from profile
                     logo_url: logoUrl
-                }]);
+                }])
+                .select('id')
+                .single();
 
             if (error) throw error;
 
+            if (newArranke) {
+                // Initialize stats for the new arranke
+                const { error: statsError } = await supabase
+                    .from('arrankes_stats')
+                    .insert([{
+                        id: newArranke.id,
+                        visit_count: 0,
+                        clicks_count: 0,
+                        likes_count: 0,
+                        dislikes_count: 0
+                    }]);
+
+                if (statsError) {
+                    console.error("Error initializing stats:", statsError);
+                }
+
+                // Get the current profile data
+                const { data: profileData, error: profileError } = await supabase
+                    .from('profiles')
+                    .select('arrankes')
+                    .eq('id', user.id)
+                    .single();
+
+                if (profileError && profileError.code !== 'PGRST116') { // PGRST116 is "no rows returned" error
+                    console.error("Error fetching profile:", profileError);
+                } else {
+                    // Update the profile with the new arranke ID
+                    const currentArrankes = profileData?.arrankes || [];
+                    const updatedArrankes = [...currentArrankes, newArranke.id];
+
+                    const { error: updateError } = await supabase
+                        .from('profiles')
+                        .update({ arrankes: updatedArrankes })
+                        .eq('id', user.id);
+
+                    if (updateError) {
+                        console.error("Error updating profile with new arranke:", updateError);
+                    }
+                }
+            }
+
+            // Store display name preference in localStorage
+            if (arranke.display_name_preference && arranke.arranke_name) {
+                try {
+                    // Store preference for this specific arranke
+                    const preferences = JSON.parse(localStorage.getItem('arranke_display_preferences') || '{}');
+                    preferences[arranke.arranke_name as string] = arranke.display_name_preference;
+                    localStorage.setItem('arranke_display_preferences', JSON.stringify(preferences));
+                } catch (e) {
+                    console.error("Error saving display preference to localStorage:", e);
+                }
+            }
+
             showToast('Arranke created successfully!', 'success');
             setTimeout(() => {
-                navigate('/projects');
+                navigate(`/${arranke.arranke_name}`);
             }, 1500);
         } catch (error: any) {
             console.error("Error creating arranke:", error);
@@ -290,7 +373,51 @@ const NewArranke = () => {
 
                             <div className="form-control">
                                 <label className="label">
-                                    <span className="label-text">Logo</span>
+                                    <span className="label-text">Preferencia de nombre a mostrar</span>
+                                </label>
+                                <div className="flex flex-col gap-2">
+                                    <div className="form-control">
+                                        <label className="label cursor-pointer justify-start gap-2">
+                                            <input
+                                                type="radio"
+                                                name="display_name_preference"
+                                                className="radio radio-primary"
+                                                checked={arranke.display_name_preference === 'default'}
+                                                onChange={() => setArranke(prev => ({ ...prev, display_name_preference: 'default' }))}
+                                            />
+                                            <span className="label-text">Por defecto (nombre completo si está disponible, de lo contrario nombre de usuario)</span>
+                                        </label>
+                                    </div>
+                                    <div className="form-control">
+                                        <label className="label cursor-pointer justify-start gap-2">
+                                            <input
+                                                type="radio"
+                                                name="display_name_preference"
+                                                className="radio radio-primary"
+                                                checked={arranke.display_name_preference === 'full_name'}
+                                                onChange={() => setArranke(prev => ({ ...prev, display_name_preference: 'full_name' }))}
+                                            />
+                                            <span className="label-text">Nombre completo: {arranke.owner_name || 'No disponible'}</span>
+                                        </label>
+                                    </div>
+                                    <div className="form-control">
+                                        <label className="label cursor-pointer justify-start gap-2">
+                                            <input
+                                                type="radio"
+                                                name="display_name_preference"
+                                                className="radio radio-primary"
+                                                checked={arranke.display_name_preference === 'username'}
+                                                onChange={() => setArranke(prev => ({ ...prev, display_name_preference: 'username' }))}
+                                            />
+                                            <span className="label-text">Nombre de usuario: {arranke.owner_username || 'No disponible'}</span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="form-control">
+                                <label className="label">
+                                    <span className="label-text">Logo (recomendado 500x500px)</span>
                                 </label>
                                 <div className="w-full">
                                     <input

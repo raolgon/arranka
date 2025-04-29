@@ -43,10 +43,10 @@ const Navbar = () => {
                                 <NavLink to="/projects" className="btn btn-ghost">arrankes</NavLink>
                             </li>
                             {isLoggedIn && (
-                                <li>
-                                    <NavLink to="/profile" className="btn btn-ghost">perfil</NavLink>
-                                </li>
-                            )}
+                            <li>
+                                <NavLink to="/dashboard" className="btn btn-ghost">dashboard</NavLink>
+                            </li>
+                        )}
                         </ul>
                     </div>
                     <NavLink to="/" className="btn btn-ghost normal-case text-xl">arranke</NavLink>
@@ -59,6 +59,11 @@ const Navbar = () => {
                         <li>
                             <NavLink to="/projects" className="btn btn-ghost">arrankes</NavLink>
                         </li>
+                        {isLoggedIn && (
+                            <li>
+                                <NavLink to="/dashboard" className="btn btn-ghost">dashboard</NavLink>
+                            </li>
+                        )}
                     </ul>
                 </div>
                 <div className="navbar-end">

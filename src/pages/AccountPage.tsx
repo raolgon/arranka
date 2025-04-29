@@ -19,6 +19,8 @@ interface Arranke {
     logo_url: string | null;
     owner_id: string | null;
     owner_name: string | null;
+    owner_username?: string | null;
+    display_name_preference?: 'full_name' | 'username' | 'default';
     arranke_category: string | null;
     views?: number;
     likes?: number;
@@ -36,8 +38,7 @@ const AccountPage = () => {
     });
     const [updateLoading, setUpdateLoading] = useState(false);
     const [arrankes, setArrankes] = useState<Arranke[]>([]);
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [currentArranke, setCurrentArranke] = useState<Arranke | null>(null);
+
     const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' }>({
         show: false,
         message: '',
@@ -150,54 +151,36 @@ const AccountPage = () => {
         }
     }
 
-    async function updateArranke(e: React.FormEvent) {
-        e.preventDefault();
-        setUpdateLoading(true);
-        try {
-            if (!user) throw new Error('No se encontró usuario');
-            if (!currentArranke) throw new Error('No se seleccionó ningún arranke');
 
-            const { error } = await supabase
-                .from('arrankes')
-                .update({
-                    name: currentArranke.arranke_name,
-                    slogan: currentArranke.arranke_slogan,
-                    description: currentArranke.arranke_description,
-                    project_url: currentArranke.arranke_url,
-                    logo_url: currentArranke.logo_url,
-                    updated_at: new Date()
-                })
-                .eq('id', currentArranke.id);
 
-            if (error) throw error;
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [arrankeToDelete, setArrankeToDelete] = useState<string | null>(null);
 
-            showToast('¡Arranke actualizado con éxito!', 'success');
-            await getArrankes(user.id);
-            setIsModalOpen(false);
-        } catch (error: any) {
-            console.error("Error al actualizar el arranke:", error);
-            showToast(error.message, 'error');
-        } finally {
-            setUpdateLoading(false);
-        }
+    function openDeleteModal(arrankeId: string) {
+        setArrankeToDelete(arrankeId);
+        setIsDeleteModalOpen(true);
     }
 
-    async function deleteArranke(arrankeId: string) {
-        if (!confirm('¿Estás seguro de que quieres eliminar este arranke?')) return;
+    async function deleteArranke() {
+        if (!arrankeToDelete) return;
+        setUpdateLoading(true);
 
         try {
             const { error } = await supabase
                 .from('arrankes')
                 .delete()
-                .eq('id', arrankeId);
+                .eq('id', arrankeToDelete);
 
             if (error) throw error;
 
             showToast('¡Arranke eliminado con éxito!', 'success');
-            setArrankes(arrankes.filter(arranke => arranke.id !== arrankeId));
+            setArrankes(arrankes.filter(arranke => arranke.id !== arrankeToDelete));
+            setIsDeleteModalOpen(false);
         } catch (error: any) {
             console.error("Error al eliminar el arranke:", error);
             showToast(error.message, 'error');
+        } finally {
+            setUpdateLoading(false);
         }
     }
 
@@ -379,18 +362,12 @@ const AccountPage = () => {
                                                 <td>{arranke.views || 0}</td>
                                                 <td>
                                                     <div className="flex gap-2">
-                                                        <button
-                                                            className="btn btn-sm btn-ghost"
-                                                            onClick={() => {
-                                                                setCurrentArranke(arranke);
-                                                                setIsModalOpen(true);
-                                                            }}
-                                                        >
+                                                        <Link to="/dashboard" className="btn btn-sm btn-ghost">
                                                             Editar
-                                                        </button>
+                                                        </Link>
                                                         <button
                                                             className="btn btn-sm btn-error"
-                                                            onClick={() => deleteArranke(arranke.id)}
+                                                            onClick={() => openDeleteModal(arranke.id)}
                                                         >
                                                             eliminar
                                                         </button>
@@ -406,137 +383,31 @@ const AccountPage = () => {
                 </div>
             </div>
 
-            {/* Edit Arranke Modal */}
-            {isModalOpen && currentArranke && (
+            {/* Delete Confirmation Modal */}
+            {isDeleteModalOpen && (
                 <div className="modal modal-open">
-                    <div className="modal-box w-11/12 max-w-2xl">
-                        <h3 className="font-bold text-lg mb-4">Editar Proyecto</h3>
-                        <form onSubmit={updateArranke} className="space-y-4">
-                            <div className="form-control">
-                                <label className="label">
-                                    <span className="label-text">Nombre del Proyecto</span>
-                                </label>
-                                <input
-                                    type="text"
-                                    placeholder="Nombre del proyecto"
-                                    className="input input-bordered"
-                                    value={currentArranke.arranke_name || ''}
-                                    onChange={(e) => setCurrentArranke({...currentArranke, arranke_name: e.target.value})}
-                                    required
-                                />
-                            </div>
+                    <div className="modal-box">
+                        <h3 className="font-bold text-lg mb-4">Confirmar eliminación</h3>
+                        <p>¿Estás seguro de que quieres eliminar este arranke?</p>
+                        <p className="text-sm text-base-content/70 mt-2">Esta acción no se puede deshacer.</p>
 
-                            <div className="form-control">
-                                <label className="label">
-                                    <span className="label-text">Eslogan</span>
-                                </label>
-                                <input
-                                    type="text"
-                                    placeholder="Eslogan del proyecto"
-                                    className="input input-bordered"
-                                    value={currentArranke.arranke_slogan || ''}
-                                    onChange={(e) => setCurrentArranke({...currentArranke, arranke_slogan: e.target.value})}
-                                    required
-                                />
-                            </div>
-
-                            <div className="form-control">
-                                <label className="label">
-                                    <span className="label-text">URL del Proyecto</span>
-                                </label>
-                                <input
-                                    type="url"
-                                    placeholder="https://tu-proyecto.com"
-                                    className="input input-bordered"
-                                    value={currentArranke.arranke_url || ''}
-                                    onChange={(e) => setCurrentArranke({...currentArranke, arranke_url: e.target.value})}
-                                    required
-                                />
-                            </div>
-
-                            <div className="form-control">
-                                <label className="label">
-                                    <span className="label-text">Descripción</span>
-                                </label>
-                                <textarea
-                                    placeholder="Descripción del proyecto"
-                                    className="textarea textarea-bordered h-32 w-full"
-                                    value={currentArranke.arranke_description || ''}
-                                    onChange={(e) => setCurrentArranke({...currentArranke, arranke_description: e.target.value})}
-                                    required
-                                ></textarea>
-                            </div>
-
-                            <div className="form-control">
-                                <label className="label">
-                                    <span className="label-text">Logo</span>
-                                </label>
-                                <input
-                                    type="file"
-                                    className="file-input file-input-bordered w-full"
-                                    onChange={async (e) => {
-                                        if (!e.target.files || e.target.files.length === 0 || !user) return;
-
-                                        const file = e.target.files[0];
-                                        const fileExt = file.name.split('.').pop();
-                                        const filePath = `${user.id}/${Math.random()}.${fileExt}`;
-
-                                        const { error: uploadError } = await supabase.storage
-                                            .from('logos')
-                                            .upload(filePath, file);
-
-                                        if (uploadError) {
-                                            console.error('Error al subir el logo:', uploadError);
-                                            showToast('Error al subir el logo: ' + uploadError.message, 'error');
-                                            return;
-                                        }
-
-                                        const { data: { publicUrl } } = supabase.storage
-                                            .from('logos')
-                                            .getPublicUrl(filePath);
-
-                                        setCurrentArranke({...currentArranke, logo_url: publicUrl});
-                                        showToast('¡Logo subido con éxito!', 'success');
-                                    }}
-                                />
-                                {currentArranke.logo_url && (
-                                    <div className="mt-2">
-                                        <p className="text-sm mb-1">Logo actual:</p>
-                                        <img
-                                            src={currentArranke.logo_url}
-                                            alt="Logo"
-                                            className="h-16 w-16 object-cover rounded"
-                                        />
-                                    </div>
-                                )}
-                            </div>
-
-                            <div className="modal-action">
-                                <button
-                                    type="button"
-                                    className="btn btn-error"
-                                    onClick={() => deleteArranke(currentArranke.id)}
-                                >
-                                    Eliminar
-                                </button>
-                                <button
-                                    type="button"
-                                    className="btn"
-                                    onClick={() => setIsModalOpen(false)}
-                                >
-                                    Cancelar
-                                </button>
-                                <button
-                                    type="submit"
-                                    className={`btn btn-primary ${updateLoading ? 'loading' : ''}`}
-                                    disabled={updateLoading}
-                                >
-                                    {updateLoading ? 'Actualizando...' : 'Actualizar Proyecto'}
-                                </button>
-                            </div>
-                        </form>
+                        <div className="modal-action">
+                            <button
+                                className="btn"
+                                onClick={() => setIsDeleteModalOpen(false)}
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                className={`btn btn-error ${updateLoading ? 'loading' : ''}`}
+                                onClick={deleteArranke}
+                                disabled={updateLoading}
+                            >
+                                {updateLoading ? 'Eliminando...' : 'Eliminar'}
+                            </button>
+                        </div>
                     </div>
-                    <div className="modal-backdrop" onClick={() => setIsModalOpen(false)}></div>
+                    <div className="modal-backdrop" onClick={() => setIsDeleteModalOpen(false)}></div>
                 </div>
             )}
 
