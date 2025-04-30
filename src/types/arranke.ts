@@ -13,6 +13,11 @@ export interface Arranke {
     likes?: number;
     dislikes?: number;
     views?: number;
+    // Stats from arrankes_stats table
+    likes_count?: number;
+    dislikes_count?: number;
+    visit_count?: number;
+    clicks_count?: number;
     created_at?: string;
     updated_at?: string;
 }
