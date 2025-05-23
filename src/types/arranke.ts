@@ -1,23 +1,26 @@
 export interface Arranke {
-    id: string | number;
-    arranke_name: string;
-    arranke_slogan?: string;
-    arranke_description?: string;
-    arranke_url?: string;
-    arranke_category?: string;
-    logo_url?: string;
-    owner_id?: string;
-    owner_name?: string; // Full name from profile
-    owner_username?: string; // Username from profile
-    display_name_preference?: 'full_name' | 'username' | 'default'; // Which name to display in cards and pages
-    likes?: number;
-    dislikes?: number;
-    views?: number;
-    // Stats from arrankes_stats table
+    id?: number;
+    arranke_name: string | null;
+    arranke_slogan: string | null;
+    arranke_description: string | null;
+    arranke_url: string | null;
+    logo_url: string | null;
+    owner_id: string | null;
+    owner_name: string | null;
+    owner_username: string | null;
+    display_name_preference: 'full_name' | 'username' | 'default';
+    arranke_category: string | null;
+    // New fields
+    status: 'pending' | 'approved' | 'rejected';
+    submission_date: string;
+    approval_date?: string;
+    is_premium: boolean;
+    // Stats fields
     likes_count?: number;
     dislikes_count?: number;
     visit_count?: number;
     clicks_count?: number;
+    // Timestamp fields
     created_at?: string;
     updated_at?: string;
 }

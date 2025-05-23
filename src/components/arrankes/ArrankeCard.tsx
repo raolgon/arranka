@@ -8,6 +8,32 @@ interface ArrankeProps {
     arranke?: Arranke;
 }
 
+function getStatusBadgeColor(status: string) {
+    switch (status) {
+        case 'approved':
+            return 'badge-success';
+        case 'pending':
+            return 'badge-warning';
+        case 'rejected':
+            return 'badge-error';
+        default:
+            return 'badge-neutral';
+    }
+}
+
+function getStatusLabel(status: string) {
+    switch (status) {
+        case 'approved':
+            return 'Aprobado';
+        case 'pending':
+            return 'Pendiente';
+        case 'rejected':
+            return 'Rechazado';
+        default:
+            return 'Desconocido';
+    }
+}
+
 const ArrankeCard = ({ arranke }: ArrankeProps) => {
     // If no arranke data is provided, show a placeholder encouraging users to create projects
     if (!arranke) {
@@ -35,20 +61,25 @@ const ArrankeCard = ({ arranke }: ArrankeProps) => {
             <figure className="flex items-center justify-center p-2">
                 <img
                 src={arranke.logo_url || "https://placehold.co/200x200/blue/white"}
-                alt={arranke.arranke_name}
+                alt={arranke.arranke_name || "Project logo"}
                 className="w-[200px] h-[200px] md:w-[300px] md:h-[300px] lg:w-[200px] lg:h-[200px] object-cover rounded-lg" />
             </figure>
             <div className="card-body">
                 <h2 className="card-title">{arranke.arranke_name}</h2>
                 <p>{arranke.arranke_slogan || arranke.arranke_description?.substring(0, 120) || "Sin descripción"}</p>
                 <p>creador por: {getDisplayName(arranke.arranke_name, arranke.owner_name, arranke.owner_username, arranke.display_name_preference)}</p>
-                {arranke.arranke_category && <div className="badge badge-accent">{arranke.arranke_category}</div>}
+                <div className="flex flex-wrap gap-2 mt-2">
+                    {arranke.arranke_category && <div className="badge badge-accent">{arranke.arranke_category}</div>}
+                    {arranke.status && <div className={`badge ${getStatusBadgeColor(arranke.status)}`}>{getStatusLabel(arranke.status)}</div>}
+                </div>
                 <div className="card-actions justify-end">
-                    <LikeDislikeButtons
-                        arrankeId={arranke.id.toString()}
-                        initialLikes={arranke.likes_count || 0}
-                        initialDislikes={arranke.dislikes_count || 0}
-                    />
+                    {arranke.id && (
+                        <LikeDislikeButtons
+                            arrankeId={arranke.id.toString()}
+                            initialLikes={arranke.likes_count || 0}
+                            initialDislikes={arranke.dislikes_count || 0}
+                        />
+                    )}
                     <Link to={`/${arranke.arranke_name}`} className="btn btn-primary">< SquareArrowOutUpRight size={24} /></Link>
                 </div>
             </div>

@@ -53,7 +53,7 @@ const HeroSection = ({ featuredArranke }: HeroSectionProps) => {
                         <div className="max-w-md">
                             <h1 className="text-5xl font-bold">arranka tu proyecto</h1>
                             <p className="py-6">
-                                arranke es una plataforma que te permite crear y compartir tus proyectos con todos.
+                                arranke es una plataforma para las mejores startups y proyectos de latinomaerica para el mundo
                             </p>
                             <div className="flex flex-wrap justify-center lg:justify-start gap-4">
                                 <button

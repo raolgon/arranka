@@ -14,6 +14,10 @@ interface Arranke {
     owner_username: string | null; // Will store username from profile
     display_name_preference: 'full_name' | 'username' | 'default' | null; // Which name to display in cards and pages
     arranke_category: string | null;
+    status: 'pending' | 'approved' | 'rejected';
+    submission_date: string;
+    approval_date?: string;
+    is_premium: boolean;
 }
 
 const NewArranke = () => {
@@ -29,8 +33,12 @@ const NewArranke = () => {
         owner_name: null,
         owner_username: null,
         display_name_preference: 'default', // Default to using full_name if available, otherwise username
-        arranke_category: null
+        arranke_category: null,
+        status: 'pending',
+        submission_date: new Date().toISOString(),
+        is_premium: false
     });
+    const [isPremium, setIsPremium] = useState(false);
     const [logoFile, setLogoFile] = useState<File | null>(null);
     const [logoPreview, setLogoPreview] = useState<string | null>(null);
     const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' }>({
@@ -113,6 +121,13 @@ const NewArranke = () => {
         try {
             if (!user) throw new Error('No user found');
 
+            // If premium, handle payment first
+            if (isPremium) {
+                // Here you would integrate with a payment provider like Stripe
+                // For now, we'll just set the status directly
+                arranke.is_premium = true;
+            }
+
             let logoUrl = arranke.logo_url;
 
             // Upload logo if a new file was selected
@@ -133,7 +148,7 @@ const NewArranke = () => {
                 logoUrl = publicUrl;
             }
 
-            // Insert the new arranke and get the ID
+            // First, create the arranke
             const { data: newArranke, error } = await supabase
                 .from('arrankes')
                 .insert([{
@@ -143,30 +158,49 @@ const NewArranke = () => {
                     arranke_url: arranke.arranke_url,
                     arranke_category: arranke.arranke_category,
                     owner_id: user.id,
-                    owner_name: arranke.owner_name, // Using full_name from profile
-                    owner_username: arranke.owner_username, // Using username from profile
-                    logo_url: logoUrl
+                    owner_name: arranke.owner_name,
+                    owner_username: arranke.owner_username,
+                    logo_url: logoUrl,
+                    display_name_preference: arranke.display_name_preference || 'default',
+                    status: arranke.status,
+                    submission_date: new Date().toISOString(),
+                    approval_date: arranke.approval_date,
+                    is_premium: arranke.is_premium
                 }])
                 .select('id')
                 .single();
 
             if (error) throw error;
 
-            if (newArranke) {
-                // Initialize stats for the new arranke
-                const { error: statsError } = await supabase
-                    .from('arrankes_stats')
-                    .insert([{
-                        id: newArranke.id,
-                        visit_count: 0,
-                        clicks_count: 0,
-                        likes_count: 0,
-                        dislikes_count: 0
-                    }]);
+            const newArrankeId = newArranke.id;
 
-                if (statsError) {
-                    console.error("Error initializing stats:", statsError);
+            // Then create the stats record using the arranke ID
+            const { error: statsError } = await supabase
+                .from('arrankes_stats')
+                .insert([{
+                    id: newArrankeId,
+                    visit_count: 0,
+                    clicks_count: 0,
+                    likes_count: 0,
+                    dislikes_count: 0
+                }]);
+
+            if (statsError) {
+                console.error("Error creating stats record:", statsError);
+                // If stats creation fails, we should delete the arranke to avoid orphaned records
+                const { error: deleteError } = await supabase
+                    .from('arrankes')
+                    .delete()
+                    .eq('id', newArrankeId);
+
+                if (deleteError) {
+                    console.error("Error deleting arranke after stats creation failed:", deleteError);
                 }
+
+                throw new Error("Failed to create stats for the arranke. Please try again.");
+            }
+
+            if (newArrankeId) {
 
                 // Get the current profile data
                 const { data: profileData, error: profileError } = await supabase
@@ -180,7 +214,7 @@ const NewArranke = () => {
                 } else {
                     // Update the profile with the new arranke ID
                     const currentArrankes = profileData?.arrankes || [];
-                    const updatedArrankes = [...currentArrankes, newArranke.id];
+                    const updatedArrankes = [...currentArrankes, newArrankeId];
 
                     const { error: updateError } = await supabase
                         .from('profiles')

@@ -6,6 +6,7 @@ import AccountPage from './pages/AccountPage'
 import NewArranke from './pages/NewArranke'
 import Arranke from './pages/Arranke'
 import Dashboard from './pages/Dashboard'
+import AdminDashboard from './pages/AdminDashboard'
 
 function App() {
   return (
@@ -18,6 +19,7 @@ function App() {
       <Route path="/profile" element={<AccountPage />} />
       <Route path="/newArranke" element={<NewArranke />} />
       <Route path="/:projectName" element={<Arranke />} />
+      <Route path="/admin" element={<AdminDashboard />} />
     </Routes>
   )
 }

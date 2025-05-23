@@ -5,6 +5,33 @@ import { Arranke as ArrankeType } from "../types/arranke";
 import { getDisplayName } from "../utils/displayNamePreference";
 import LikeDislikeButtons from "../components/arrankes/LikeDislikeButtons";
 
+// Helper functions for status display
+function getStatusBadgeColor(status: string) {
+    switch (status) {
+        case 'approved':
+            return 'badge-success';
+        case 'pending':
+            return 'badge-warning';
+        case 'rejected':
+            return 'badge-error';
+        default:
+            return 'badge-neutral';
+    }
+}
+
+function getStatusLabel(status: string) {
+    switch (status) {
+        case 'approved':
+            return 'Aprobado';
+        case 'pending':
+            return 'Pendiente';
+        case 'rejected':
+            return 'Rechazado';
+        default:
+            return 'Desconocido';
+    }
+}
+
 interface Arranke extends ArrankeType {
     // Extending the shared Arranke type to ensure compatibility
     likes_count?: number;
@@ -124,7 +151,7 @@ function Arranke() {
                                 <div className="w-32 h-32 md:w-48 md:h-48 lg:w-64 lg:h-64 rounded-xl">
                                     <img
                                         src={arranke.logo_url || 'https://placehold.co/400x400/blue/white?text=Arranke'}
-                                        alt={arranke.arranke_name}
+                                        alt={arranke.arranke_name || "Project logo"}
                                         className="object-cover w-full h-full"
                                     />
                                 </div>
@@ -132,13 +159,20 @@ function Arranke() {
                             <div className="flex-1 text-center md:text-left">
                                 <div className="flex flex-col md:flex-row md:items-center gap-2 mb-2">
                                     <h1 className="text-4xl font-bold">{arranke.arranke_name}</h1>
-                                    <div className="badge badge-primary badge-lg">{arranke.arranke_category}</div>
+                                    <div className="flex gap-2">
+                                        <div className="badge badge-primary badge-lg">{arranke.arranke_category}</div>
+                                        {arranke.status && (
+                                            <div className={`badge ${getStatusBadgeColor(arranke.status)} badge-lg`}>
+                                                {getStatusLabel(arranke.status)}
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                                 <p className="text-xl text-base-content/70 mb-1">{arranke.arranke_slogan}</p>
                                 <p className="text-sm text-base-content/50 mb-4">Created by <span className="font-semibold">{getDisplayName(arranke.arranke_name, arranke.owner_name, arranke.owner_username, arranke.display_name_preference)}</span></p>
                                 <div className="flex gap-4 justify-center md:justify-start">
                                     <a
-                                        href={arranke.arranke_url}
+                                        href={arranke.arranke_url || '#'}
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         className="btn btn-primary"
@@ -146,12 +180,14 @@ function Arranke() {
                                     >
                                         Visit Project
                                     </a>
-                                    <LikeDislikeButtons
-                                        arrankeId={arranke.id.toString()}
-                                        initialLikes={arranke.likes_count || 0}
-                                        initialDislikes={arranke.dislikes_count || 0}
-                                        size={24}
-                                    />
+                                    {arranke.id && (
+                                        <LikeDislikeButtons
+                                            arrankeId={arranke.id.toString()}
+                                            initialLikes={arranke.likes_count || 0}
+                                            initialDislikes={arranke.dislikes_count || 0}
+                                            size={24}
+                                        />
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -188,13 +224,13 @@ function Arranke() {
                         <div className="card-body">
                             <h3 className="card-title">Project URL</h3>
                             <a
-                                href={arranke.arranke_url}
+                                href={arranke.arranke_url || '#'}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="link link-primary text-lg truncate"
                                 onClick={handleUrlClick}
                             >
-                                {arranke.arranke_url}
+                                {arranke.arranke_url || 'No URL provided'}
                             </a>
                         </div>
                     </div>

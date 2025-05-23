@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabaseClient';
 import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Check, X, AlertTriangle } from 'lucide-react';
+import GoogleButton from '../components/auth/GoogleButton';
 
 // Password validation criteria
 const MIN_PASSWORD_LENGTH = 8;
@@ -134,6 +135,26 @@ const LoginPage = () => {
         // Show success message instead of error
         setError('Se ha enviado un correo de verificación. Por favor, revise su bandeja de entrada.');
       }
+    } catch (error: any) {
+      setError(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/dashboard`
+        }
+      });
+
+      if (error) throw error;
     } catch (error: any) {
       setError(error.message);
     } finally {
@@ -279,6 +300,13 @@ const LoginPage = () => {
           </form>
 
           <div className="divider">O</div>
+
+          <div className="px-6 pb-6">
+            <GoogleButton
+              onClick={handleGoogleSignIn}
+              disabled={loading}
+            />
+          </div>
 
           <div className="text-center">
             <button
